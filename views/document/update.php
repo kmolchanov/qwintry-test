@@ -61,6 +61,7 @@ $this->params['breadcrumbs'][] = 'Update';
             ],
             [
                 'class' => 'yii\grid\ActionColumn',
+                'template' => '{delete}',
                 'buttons' => [
                     'delete' => function ($url, $model) {
                         return Html::tag('span', Html::a('<span class="glyphicon glyphicon-trash"></span>',
