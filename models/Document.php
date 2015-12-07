@@ -45,6 +45,15 @@ class Document extends \yii\db\ActiveRecord
         ];
     }
 
+    public function beforeDelete()
+    {
+        foreach ($this->attachments as $attachment) {
+            $attachment->delete();
+        }
+
+        return parent::beforeDelete();
+    }
+
     /**
      * @inheritdoc
      * @return DocumentQuery the active query used by this AR class.
@@ -52,5 +61,10 @@ class Document extends \yii\db\ActiveRecord
     public static function find()
     {
         return new DocumentQuery(get_called_class());
+    }
+
+    public function getAttachments()
+    {
+        return $this->hasMany(Attachment::className(), ['document_id' => 'id']);
     }
 }

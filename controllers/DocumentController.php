@@ -2,12 +2,17 @@
 
 namespace app\controllers;
 
+use app\models\Attachment;
+use app\models\AttachmentSearch;
 use Yii;
 use app\models\Document;
 use app\models\DocumentSearch;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use yii\web\UploadedFile;
+use app\models\UploadForm;
+use yii\web\Response;
 
 /**
  * DocumentController implements the CRUD actions for Document model.
@@ -26,6 +31,15 @@ class DocumentController extends Controller
         ];
     }
 
+    public function actions()
+    {
+        return [
+            'sorting' => [
+                'class' => \kotchuprik\sortable\actions\Sorting::className(),
+                'query' => Attachment::find(),
+            ],
+        ];
+    }
     /**
      * Lists all Document models.
      * @return mixed
@@ -42,18 +56,6 @@ class DocumentController extends Controller
     }
 
     /**
-     * Displays a single Document model.
-     * @param integer $id
-     * @return mixed
-     */
-    public function actionView($id)
-    {
-        return $this->render('view', [
-            'model' => $this->findModel($id),
-        ]);
-    }
-
-    /**
      * Creates a new Document model.
      * If creation is successful, the browser will be redirected to the 'view' page.
      * @return mixed
@@ -63,7 +65,7 @@ class DocumentController extends Controller
         $model = new Document();
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+            return $this->redirect(['update', 'id' => $model->id]);
         } else {
             return $this->render('create', [
                 'model' => $model,
@@ -80,12 +82,18 @@ class DocumentController extends Controller
     public function actionUpdate($id)
     {
         $model = $this->findModel($id);
+        $searchModel = new AttachmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, $id);
+//        $dataProvider->sort = false;
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
         } else {
             return $this->render('update', [
                 'model' => $model,
+                'attachmentList' => count($model->attachments),
+                'searchModel' => $searchModel,
+                'dataProvider' => $dataProvider,
             ]);
         }
     }
@@ -103,6 +111,16 @@ class DocumentController extends Controller
         return $this->redirect(['index']);
     }
 
+    public function actionDeleteAttachment($id)
+    {
+
+        $attachment = Attachment::findOne($id);
+        $document_id = $attachment->document_id;
+        $attachment->delete();
+
+        return $this->redirect(['update', 'id' => $document_id]);
+    }
+
     /**
      * Finds the Document model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
@@ -116,6 +134,24 @@ class DocumentController extends Controller
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
+        }
+    }
+
+    public function actionUpload()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $document = $this->findModel(Yii::$app->request->post('id'));
+
+        $model = new UploadForm();
+
+        if (Yii::$app->request->isAjax) {
+            $model->files = UploadedFile::getInstancesByName('files');
+            $model->document_id = $document->id;
+            if ($model->upload()) {
+                return ['fileuploaded' => 'true'];
+            } else {
+                return $model->errors;
+            }
         }
     }
 }
